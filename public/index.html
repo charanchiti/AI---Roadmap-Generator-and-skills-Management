@@ -630,20 +630,35 @@
         document.addEventListener('DOMContentLoaded', function() {
             renderSkills();
         });
-        // Firebase Configuration
-        // Replace these with your actual Firebase project configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCOORC_HCzVIA1P4AN-_Z47fAk-qHZRHWs",
-            authDomain: "skillsprint-7d54e.firebaseapp.com",
-            projectId: "skillsprint-7d54e",
-            storageBucket: "skillsprint-7d54e.firebasestorage.app",
-            messagingSenderId: "389728648008", // You'll need to get this from Firebase Console
-            appId: "1:389728648008:web:65b893bf93a76419e6917d" // You'll need to get this from Firebase Console
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        // Firebase initialization: fetch client-safe config from server
+        // Server endpoint /api/config reads values from environment variables
+        let auth = null;
+        async function initFirebaseFromServer() {
+            try {
+                const resp = await fetch('/api/config', { cache: 'no-store' });
+                if (!resp.ok) throw new Error('Failed to load Firebase config');
+                const firebaseConfig = await resp.json();
+                // Basic validation
+                if (!firebaseConfig || !firebaseConfig.apiKey) {
+                    console.warn('Firebase config missing apiKey; Firebase not initialized');
+                    return;
+                }
+                // Initialize Firebase (compat) for existing frontend code
+                if (!window.firebase || !firebase.initializeApp) throw new Error('Firebase SDK not present');
+                firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                console.log('Firebase initialized from server-provided config.');
+                // If auth state handlers or other startup logic need to run, call them here
+                // For example, re-attach onAuthStateChanged listener if it was added earlier
+                if (auth && typeof auth.onAuthStateChanged === 'function') {
+                    // Re-register if needed; many handlers already reference `auth` variable
+                }
+            } catch (err) {
+                console.error('Firebase init error:', err);
+            }
+        }
+        // Initialize on load
+        initFirebaseFromServer();
 
         // Global variables
         let currentUser = null;
@@ -697,29 +712,47 @@
             }
         }
 
-        // Check authentication state on page load
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                // User is signed in
-                currentUser = user;
-                try {
-                    userToken = await user.getIdToken();
-                    console.log('Firebase ID token obtained:', userToken ? 'Token received' : 'No token');
-                } catch (error) {
-                    console.error('Error getting ID token:', error);
-                    userToken = null;
+        // Register auth state listener once Firebase auth is ready
+        function whenAuthReady(callback) {
+            const maxWait = 5000; // ms
+            const intervalMs = 50;
+            let waited = 0;
+            const iv = setInterval(() => {
+                if (typeof auth !== 'undefined' && auth && typeof auth.onAuthStateChanged === 'function') {
+                    clearInterval(iv);
+                    callback();
+                } else if (waited >= maxWait) {
+                    clearInterval(iv);
+                    console.warn('Firebase auth not available after waiting; auth listeners not attached');
                 }
-                showNavbar(user);
-                showApp();
-                updateUserInfo();
-                loadSkillSuggestions();
-            } else {
-                // User is signed out
-                currentUser = null;
-                userToken = null;
-                document.getElementById('navbarContainer').innerHTML = '';
-                showLogin();
-            }
+                waited += intervalMs;
+            }, intervalMs);
+        }
+
+        whenAuthReady(() => {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    // User is signed in
+                    currentUser = user;
+                    try {
+                        userToken = await user.getIdToken();
+                        console.log('Firebase ID token obtained:', userToken ? 'Token received' : 'No token');
+                    } catch (error) {
+                        console.error('Error getting ID token:', error);
+                        userToken = null;
+                    }
+                    showNavbar(user);
+                    showApp();
+                    updateUserInfo();
+                    loadSkillSuggestions();
+                } else {
+                    // User is signed out
+                    currentUser = null;
+                    userToken = null;
+                    document.getElementById('navbarContainer').innerHTML = '';
+                    showLogin();
+                }
+            });
         });
 
         // Show/Hide sections

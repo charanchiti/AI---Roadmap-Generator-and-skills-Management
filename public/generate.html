@@ -518,19 +518,23 @@
     </div>
 
     <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCOORC_HCzVIA1P4AN-_Z47fAk-qHZRHWs",
-            authDomain: "skillsprint-7d54e.firebaseapp.com",
-            projectId: "skillsprint-7d54e",
-            storageBucket: "skillsprint-7d54e.firebasestorage.app",
-            messagingSenderId: "389728648008",
-            appId: "1:389728648008:web:65b893bf93a76419e6917d"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+        // Initialize Firebase by fetching client-side config from the server
+        let auth = null;
+        async function initFirebaseFromServer() {
+            try {
+                const resp = await fetch('/api/config', { cache: 'no-store' });
+                if (!resp.ok) throw new Error('Failed to fetch Firebase config');
+                const cfg = await resp.json();
+                if (!cfg || !cfg.apiKey) throw new Error('Invalid Firebase config from server');
+                if (!window.firebase || !firebase.initializeApp) throw new Error('Firebase SDK not loaded');
+                firebase.initializeApp(cfg);
+                auth = firebase.auth();
+                console.log('Firebase initialized on generate.html');
+            } catch (e) {
+                console.error('Firebase init error:', e);
+            }
+        }
+        initFirebaseFromServer();
 
         // Global variables
         let currentUser = null;
