@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Roadmap - SkillSprint</title>
+    
+    <!-- Firebase SDK for Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        /* Modern CSS with clean design */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .nav-bar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-bar a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+    /* Grouping helpers so nav links sit together on left and user controls on right */
+    .nav-left { display:flex; gap:12px; align-items:center; flex:1; }
+    .nav-right { display:flex; gap:12px; align-items:center; }
+
+    /* Make nav items more visible on translucent background */
+    .nav-bar a { color: #fff; font-weight:600; }
+
+    /* Truncate long user emails and keep layout stable */
+    #userEmail {
+        max-width: 220px;
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.95rem;
+        opacity: 0.95;
+    }
+
+        .nav-bar a:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-bar a.active {
+            background: rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .roadmap-display {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            line-height: 1.7;
+            max-height: 600px;
+            overflow-y: auto;
+            border-left: 4px solid #667eea;
+            text-align: justify; /* make paragraphs justified for better reading */
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
+            hyphens: auto;
+        }
+
+        /* Ensure card content is left-aligned for predictability */
+        .card { text-align: left; }
+
+        .roadmap-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; }
+        .roadmap-overview { margin: 10px 0 20px; color: #444; }
+        .roadmap-section { margin-top: 18px; }
+        .roadmap-section h4 { color: #667eea; margin-bottom: 8px; }
+        .roadmap-list { padding-left: 18px; }
+        .resource-list a { color: #0069d9; text-decoration: none; }
+        .resource-list a:hover { text-decoration: underline; }
+        .roadmap-fallback { white-space: pre-wrap; font-family: 'Courier New', monospace; }
+
+        /* Progress Bar */
+        .progress-wrapper { margin-top: 12px; }
+        .progress-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .progress-text { font-size: 0.95rem; color: #444; }
+        .progress { background: #e9ecef; border-radius: 8px; height: 12px; overflow: hidden; }
+        .progress-bar { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); height: 100%; width: 0%; transition: width 0.3s ease; }
+
+        /* Skill suggestions */
+        .skill-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .pill { background: #eef2ff; color: #374151; border: 1px solid #c7d2fe; padding: 6px 10px; border-radius: 9999px; cursor: pointer; font-size: 0.9rem; }
+        .pill:hover { background: #e0e7ff; }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .user-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 35px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .user-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            pointer-events: none;
+        }
+
+        .user-info::after {
+            content: '✨';
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2rem;
+            opacity: 0.3;
+            animation: sparkle 2s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+
+        .user-info h3 {
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .user-info p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .user-info .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .user-info .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Skills Proficiency Section */
+        .skills-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .skill-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .skill-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .skill-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .skill-level {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .proficiency-bar {
+            width: 100%;
+            height: 12px;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .proficiency-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+            transition: width 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .proficiency-input {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .proficiency-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .add-skill-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .add-skill-btn:hover {
+            background: #218838;
+        }
+
+        .remove-skill-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+
+        .remove-skill-btn:hover {
+            background: #c82333;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            .nav-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .nav-left { justify-content: flex-start; }
+            .nav-right { justify-content: flex-end; }
+            .nav-right { gap:8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <div class="nav-bar" role="navigation" aria-label="Main navigation">
+            <div class="nav-left">
+                <a href="/">🏠 Home</a>
+            </div>
+            <div class="nav-right">
+                <span id="userEmail" style="color: white; margin-right: 12px; font-weight:600;"></span>
+                <a href="#" onclick="signOut()">Sign Out</a>
+            </div>
+        </div>
+
+                <!-- Header Section -->
+        <div class="header">
+            <h1>📚 Your Learning Roadmap</h1>
+            <p>Your personalized learning journey awaits</p>
+        </div>
+
+        <!-- Main App Section -->
+        <div id="appSection" class="card">
+            <!-- User Info Display removed as requested -->
+
+            <!-- Roadmap Display -->
+            <div id="roadmapDisplay">
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading your roadmap...</p>
+                </div>
+                
+                <div id="roadmapContent" class="roadmap-display hidden">
+                    <div class="progress-wrapper">
+                        <div class="progress-header">
+                            <span class="progress-text" id="progressText">Progress: 0%</span>
+                            <button class="btn btn-secondary" id="resetProgressBtn" style="width:auto; padding:6px 12px;">Reset</button>
+                        </div>
+                        <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+                    </div>
+                    <div id="roadmapDetails"></div>
+                </div>
+                
+                <div id="noRoadmap" class="hidden" style="text-align: center; padding: 40px;">
+                    <h3 style="color: #667eea; margin-bottom: 20px;">No Roadmap Found</h3>
+                    <p style="color: #666; margin-bottom: 30px;">It looks like you don't have a roadmap to display. Please go back to the home page and generate one.</p>
+                    <a href="/" class="btn">🏠 Go Back Home</a>
+                </div>
+            </div>
+
+            <!-- Generate New Roadmap Button -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="/" class="btn" style="display: inline-block; text-decoration: none; margin: 0 10px;">
+                    🚀 Generate New Roadmap
+                </a>
+            </div>
+
+            <!-- Skills section removed as requested -->
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOORC_HCzVIA1P4AN-_Z47fAk-qHZRHWs",
+            authDomain: "skillsprint-7d54e.firebaseapp.com",
+            projectId: "skillsprint-7d54e",
+            storageBucket: "skillsprint-7d54e.firebasestorage.app",
+            messagingSenderId: "389728648008",
+            appId: "1:389728648008:web:65b893bf93a76419e6917d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // Global variables
+        let currentUser = null;
+        let userToken = null;
+
+        // Check authentication state on page load
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // User is signed in
+                currentUser = user;
+                try {
+                    userToken = await user.getIdToken();
+                    console.log('Firebase ID token obtained:', userToken ? 'Token received' : 'No token');
+                } catch (error) {
+                    console.error('Error getting ID token:', error);
+                    userToken = null;
+                }
+                showApp();
+                updateUserInfo();
+                loadRoadmapFromStorage();
+            } else {
+                // User is signed out - redirect to home page
+                window.location.href = '/';
+            }
+        });
+
+        // Show/Hide sections
+        function showApp() {
+            document.getElementById('appSection').classList.remove('hidden');
+        }
+
+        // Update user information display (guarded)
+        function updateUserInfo() {
+            if (currentUser) {
+                const emailEl = document.getElementById('userEmail');
+                if (emailEl) emailEl.textContent = currentUser.email;
+                const emailDisplayEl = document.getElementById('userEmailDisplay');
+                if (emailDisplayEl) emailDisplayEl.textContent = currentUser.email;
+                const userInfoEl = document.getElementById('userInfo');
+                if (userInfoEl) userInfoEl.classList.remove('hidden');
+            }
+        }
+
+        // Sign out function
+        function signOut() {
+            auth.signOut();
+            // Redirect to home page after sign out
+            window.location.href = '/';
+        }
+
+        // Load roadmap from localStorage
+        function loadRoadmapFromStorage() {
+            const roadmapData = localStorage.getItem('skillsprint_roadmap_data');
+            if (roadmapData) {
+                try {
+                    const data = JSON.parse(roadmapData);
+                    console.log('Loaded roadmap data:', data);
+                    if (!data || (typeof data !== 'object') || (!('roadmap' in data) && !('roadmapStructured' in data))) {
+                        showNoRoadmap();
+                        return;
+                    }
+                    renderRoadmap(data);
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('roadmapContent').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error parsing roadmap data:', error);
+                    showNoRoadmap();
+                }
+            } else {
+                showNoRoadmap();
+            }
+        }
+
+        // Show no roadmap message
+        function showNoRoadmap() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('noRoadmap').classList.remove('hidden');
+            setTimeout(function() {
+                window.location.href = '/';
+            }, 2500); // Redirect to home after 2.5 seconds
+        }
+
+        // Helper function to show messages
+        function showMessage(message, type, element) {
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Helper function to clear messages
+        function clearMessage(element) {
+            element.innerHTML = '';
+        }
+
+        // Render roadmap (structured if available, otherwise fallback to text)
+        function renderRoadmap(payload) {
+            const container = document.getElementById('roadmapDetails');
+            const structured = payload.roadmapStructured;
+            if (!structured) {
+                container.innerHTML = `<div class="roadmap-fallback">${escapeHtml(payload.roadmap)}</div>`;
+                return;
+            }
+
+            const {
+                title, overview, totalDays, phases = [], resources = {}, projects = [], successMetrics = []
+            } = structured;
+
+            const resourceSection = (label, items) => {
+                if (!items || !items.length) return '';
+                const links = items.map(r => `<li><a href="${encodeURI(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></li>`).join('');
+                return `
+                    <div class="roadmap-section">
+                        <h4>${label}</h4>
+                        <ul class="roadmap-list resource-list">${links}</ul>
+                    </div>
+                `;
+            };
+
+            const phasesHtml = phases.map((p, idx) => {
+                const topicsBlock = (p.topics || []).map(t => {
+                    if (typeof t === 'string') {
+                        return `<li><label><input type="checkbox" class="progress-item" data-scope="topic" data-key="${progressKey(payload)}" data-id="phase${idx}-topic-${slugify(t)}"> ${escapeHtml(t)}</label></li>`;
+                    }
+                    const topicName = escapeHtml(t.name || 'Topic');
+                    const topicResources = (t.resources || []).map(r => `<li><a href="${encodeURI(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></li>`).join('');
+                    const resourcesHtml = topicResources ? `<ul class="roadmap-list resource-list">${topicResources}</ul>` : '';
+                    return `<li><div><label><input type="checkbox" class="progress-item" data-scope="topic" data-key="${progressKey(payload)}" data-id="phase${idx}-topic-${slugify(t.name || 'topic')}"> <strong>${topicName}</strong></label>${resourcesHtml ? `<div>${resourcesHtml}</div>` : ''}</div></li>`;
+                }).join('');
+
+                return `
+                    <div class="roadmap-section">
+                        <h4>Phase ${idx + 1}: ${escapeHtml(p.name)} (${p.durationDays} days)</h4>
+                        ${p.goals?.length ? `<div><strong>Goals:</strong><ul class="roadmap-list">${p.goals.map(g => `<li><label><input type="checkbox" class="progress-item" data-scope="goal" data-key="${progressKey(payload)}" data-id="phase${idx}-goal-${slugify(g)}"> ${escapeHtml(g)}</label></li>`).join('')}</ul></div>` : ''}
+                        ${topicsBlock ? `<div><strong>Topics:</strong><ul class="roadmap-list">${topicsBlock}</ul></div>` : ''}
+                        ${p.milestones?.length ? `<div><strong>Milestones:</strong><ul class="roadmap-list">${p.milestones.map(m => `<li><label><input type="checkbox" class="progress-item" data-scope="milestone" data-key="${progressKey(payload)}" data-id="phase${idx}-ms-${slugify(m)}"> ${escapeHtml(m)}</label></li>`).join('')}</ul></div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            const resourcesHtml = `
+                ${resourceSection('Websites', resources.websites)}
+                ${resourceSection('Courses', resources.courses)}
+                ${resourceSection('Videos', resources.videos)}
+                ${resourceSection('Books', resources.books)}
+                ${resourceSection('GitHub Projects', resources.githubProjects)}
+            `;
+
+            const projectsHtml = projects?.length ? `<div class="roadmap-section"><h4>Practice Projects</h4><ul class="roadmap-list">${projects.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul></div>` : '';
+            const successHtml = successMetrics?.length ? `<div class="roadmap-section"><h4>Success Metrics</h4><ul class="roadmap-list">${successMetrics.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul></div>` : '';
+
+            container.innerHTML = `
+                <div class="roadmap-title">${escapeHtml(title || `Roadmap: ${payload.skillName}`)}</div>
+                <div class="roadmap-overview">${escapeHtml(overview || '')}</div>
+                <div class="roadmap-section"><strong>Total Duration:</strong> ${totalDays || payload.numberOfDays} days</div>
+                ${phasesHtml}
+                <div class="roadmap-section"><h4>Recommended Resources</h4>${resourcesHtml || '<p>No resources provided.</p>'}</div>
+                ${projectsHtml}
+                ${successHtml}
+            `;
+
+            // Initialize progress state for this roadmap
+            initializeProgress(payload);
+            updateProgressUI(payload);
+            document.querySelectorAll('.progress-item').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    persistProgressItem(cb.dataset.key, cb.dataset.id, cb.checked);
+                    updateProgressUI(payload);
+                });
+                // restore checked state
+                const checked = getProgressState(cb.dataset.key)[cb.dataset.id];
+                if (checked) cb.checked = true;
+            });
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Generate a safe, compact ID from arbitrary text
+        function slugify(input) {
+            return String(input || '')
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9\-]/g, '')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$|_/g, '');
+        }
+
+    // Skills suggestion pills (removed, not needed on this page)
+        function progressKey(payload) { return `skillsprint:${(payload.skillName || '').toLowerCase()}-${payload.numberOfDays}`; }
+        function getProgressState(key) {
+            try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+        }
+        function setProgressState(key, state) { localStorage.setItem(key, JSON.stringify(state)); }
+        function persistProgressItem(key, id, checked) {
+            const state = getProgressState(key);
+            state[id] = !!checked;
+            setProgressState(key, state);
+        }
+        function initializeProgress(payload) {
+            const key = progressKey(payload);
+            const state = getProgressState(key);
+            setProgressState(key, state);
+            document.getElementById('resetProgressBtn').onclick = () => { setProgressState(key, {}); updateProgressUI(payload); document.querySelectorAll('.progress-item').forEach(cb => cb.checked = false); };
+        }
+        function updateProgressUI(payload) {
+            const key = progressKey(payload);
+            const state = getProgressState(key);
+            const items = Array.from(document.querySelectorAll('.progress-item'));
+            const total = items.length || 1;
+            const done = items.filter(cb => !!state[cb.dataset.id]).length;
+            const pct = Math.round((done / total) * 100);
+            document.getElementById('progressBar').style.width = pct + '%';
+            document.getElementById('progressText').textContent = `Progress: ${pct}% (${done}/${total})`;
+        }
+
+        // Skills Proficiency Functions
+        function addSkill() {
+            const skillName = document.getElementById('newSkillName').value.trim();
+            if (!skillName) {
+                alert('Please enter a skill name');
+                return;
+            }
+
+            const skillId = 'skill_' + Date.now();
+            const skillHtml = `
+                <div class="skill-item" id="${skillId}">
+                    <div class="skill-header">
+                        <span class="skill-name">${escapeHtml(skillName)}</span>
+                        <span class="skill-level">Beginner</span>
+                        <button class="remove-skill-btn" onclick="removeSkill('${skillId}')">✕</button>
+                    </div>
+                    <div class="proficiency-bar">
+                        <div class="proficiency-fill" style="width: 20%;"></div>
+                    </div>
+                    <input type="range" class="proficiency-input" min="0" max="100" value="20" 
+                           oninput="updateProficiency('${skillId}', this.value)">
+                    <div class="proficiency-labels">
+                        <span>Beginner</span>
+                        <span>Intermediate</span>
+                        <span>Advanced</span>
+                        <span>Expert</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('skillsContainer').insertAdjacentHTML('beforeend', skillHtml);
+            document.getElementById('newSkillName').value = '';
+            
+            // Save to localStorage
+            saveSkillsToStorage();
+        }
+
+        function removeSkill(skillId) {
+            document.getElementById(skillId).remove();
+            saveSkillsToStorage();
+        }
+
+        function updateProficiency(skillId, value) {
+            const skillItem = document.getElementById(skillId);
+            const fillBar = skillItem.querySelector('.proficiency-fill');
+            const levelText = skillItem.querySelector('.skill-level');
+            
+            fillBar.style.width = value + '%';
+            
+            // Update level text based on value
+            let level = 'Beginner';
+            if (value >= 75) level = 'Expert';
+            else if (value >= 50) level = 'Advanced';
+            else if (value >= 25) level = 'Intermediate';
+            
+            levelText.textContent = level;
+            
+            // Save to localStorage
+            saveSkillsToStorage();
+        }
+
+        function saveSkillsToStorage() {
+            const skills = [];
+            document.querySelectorAll('.skill-item').forEach(item => {
+                const skillName = item.querySelector('.skill-name').textContent;
+                const proficiency = item.querySelector('.proficiency-input').value;
+                skills.push({ name: skillName, proficiency: parseInt(proficiency) });
+            });
+            localStorage.setItem('skillsprint_skills_proficiency', JSON.stringify(skills));
+        }
+
+        function loadSkillsFromStorage() {
+            const skillsData = localStorage.getItem('skillsprint_skills_proficiency');
+            if (skillsData) {
+                try {
+                    const skills = JSON.parse(skillsData);
+                    skills.forEach(skill => {
+                        addSkillFromData(skill.name, skill.proficiency);
+                    });
+                } catch (error) {
+                    console.error('Error loading skills:', error);
+                }
+            } else {
+                // Add some default skills if none exist
+                const defaultSkills = [
+                    { name: 'JavaScript', proficiency: 30 },
+                    { name: 'HTML/CSS', proficiency: 45 },
+                    { name: 'Python', proficiency: 20 },
+                    { name: 'Problem Solving', proficiency: 60 }
+                ];
+                defaultSkills.forEach(skill => {
+                    addSkillFromData(skill.name, skill.proficiency);
+                });
+            }
+        }
+
+        function addSkillFromData(skillName, proficiency) {
+            const skillId = 'skill_' + Date.now();
+            const skillHtml = `
+                <div class="skill-item" id="${skillId}">
+                    <div class="skill-header">
+                        <span class="skill-name">${escapeHtml(skillName)}</span>
+                        <span class="skill-level">${getLevelFromProficiency(proficiency)}</span>
+                        <button class="remove-skill-btn" onclick="removeSkill('${skillId}')">✕</button>
+                    </div>
+                    <div class="proficiency-bar">
+                        <div class="proficiency-fill" style="width: ${proficiency}%;"></div>
+                    </div>
+                    <input type="range" class="proficiency-input" min="0" max="100" value="${proficiency}" 
+                           oninput="updateProficiency('${skillId}', this.value)">
+                    <div class="proficiency-labels">
+                        <span>Beginner</span>
+                        <span>Intermediate</span>
+                        <span>Advanced</span>
+                        <span>Expert</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('skillsContainer').insertAdjacentHTML('beforeend', skillHtml);
+        }
+
+        function getLevelFromProficiency(proficiency) {
+            if (proficiency >= 75) return 'Expert';
+            if (proficiency >= 50) return 'Advanced';
+            if (proficiency >= 25) return 'Intermediate';
+            return 'Beginner';
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SkillSprint Generate Roadmap page loaded! 🚀');
+            loadSkillsFromStorage();
+        });
+    </script>
+</body>
+</html>

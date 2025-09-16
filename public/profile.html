@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - SkillSprint</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            min-height: 100vh;
+        }
+        .navbar {
+            width: 100%;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(102,126,234,0.07);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar-logo {
+            display: flex;
+            align-items: center;
+        }
+        .navbar-links {
+            display: flex;
+            gap: 24px;
+        }
+        .nav-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.08rem;
+            padding: 7px 16px;
+            border-radius: 6px;
+            transition: background 0.18s, color 0.18s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: #eef2ff;
+            color: #4c51bf;
+        }
+        .profile-container {
+            max-width: 420px;
+            margin: 64px auto 0 auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(102,126,234,0.10);
+            padding: 36px 32px 32px 32px;
+        }
+        h2 {
+            color: #667eea;
+            margin-bottom: 28px;
+            text-align: center;
+            font-size: 2rem;
+            letter-spacing: 0.5px;
+        }
+        .profile-section {
+            margin-bottom: 32px;
+        }
+        .profile-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .profile-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 7px;
+            border: 1.5px solid #c7d2fe;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+        .profile-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            padding: 10px 22px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .profile-btn:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6c63ff 100%);
+        }
+        .success-message {
+            color: #28a745;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+    <!-- Firebase SDK for Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-logo" onclick="window.location.href='index.html'" style="cursor:pointer;">
+            <span style="font-size:1.5rem; font-weight:700; color:#667eea; letter-spacing:1px;">🚀 SkillSprint</span>
+        </div>
+        <div class="navbar-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="add-skill.html" class="nav-link">Skills</a>
+            <a href="generate.html" class="nav-link">Roadmap</a>
+            <a href="profile.html" class="nav-link active">Profile</a>
+        </div>
+    </nav>
+    <div class="profile-container">
+        <h2>Your Profile</h2>
+        <div class="profile-section">
+            <label class="profile-label">Email</label>
+            <div id="userEmail" class="profile-input" style="background:#f7f9ff;padding:10px;border-radius:7px;border:1px solid #eef2ff;color:#333"></div>
+            <label class="profile-label">Display Name</label>
+            <input type="text" id="displayName" class="profile-input" placeholder="Your display name" />
+            <button class="profile-btn" id="saveProfileBtn">Save Profile</button>
+            <div id="profileMessage"></div>
+        </div>
+
+        <div class="profile-section">
+            <label class="profile-label">Change Password</label>
+            <input type="password" id="newPassword" class="profile-input" placeholder="New Password" />
+            <button class="profile-btn" id="changePasswordBtn">Change Password</button>
+            <div id="passwordMessage"></div>
+        </div>
+
+        <div style="text-align:center;margin-top:8px;">
+            <button class="profile-btn" id="signOutBtn" style="background:#fff;color:var(--accent, #667eea);border:1px solid #e6eefc">Sign Out</button>
+        </div>
+    </div>
+    <script>
+        // Show profile and wire actions
+        document.addEventListener('DOMContentLoaded', function(){
+            // Initialize Firebase if not already
+            if (!window.firebase || !firebase.auth) {
+                console.warn('Firebase not available');
+                return;
+            }
+            firebase.auth().onAuthStateChanged(function(user){
+                if (!user) { window.location.href = '/'; return; }
+                document.getElementById('userEmail').textContent = user.email || '';
+                document.getElementById('displayName').value = user.displayName || '';
+            });
+
+            document.getElementById('saveProfileBtn').addEventListener('click', async function(){
+                const btn = this; const msg = document.getElementById('profileMessage'); msg.textContent=''; msg.className='';
+                const newName = document.getElementById('displayName').value.trim();
+                const user = firebase.auth().currentUser;
+                if (!user) { msg.textContent='Not signed in'; msg.className='error-message'; return; }
+                try {
+                    await user.updateProfile({ displayName: newName });
+                    msg.textContent = 'Profile updated'; msg.className='success-message';
+                } catch (err) { msg.textContent = err.message; msg.className='error-message'; }
+            });
+
+            document.getElementById('changePasswordBtn').addEventListener('click', async function(){
+                const msg = document.getElementById('passwordMessage'); msg.textContent=''; msg.className='';
+                const newPassword = document.getElementById('newPassword').value;
+                if (!newPassword || newPassword.length < 6) { msg.textContent='Password must be at least 6 characters.'; msg.className='error-message'; return; }
+                const user = firebase.auth().currentUser;
+                try {
+                    await user.updatePassword(newPassword);
+                    msg.textContent='Password updated successfully!'; msg.className='success-message'; document.getElementById('newPassword').value='';
+                } catch (err) { msg.textContent = err.message; msg.className='error-message'; }
+            });
+
+            document.getElementById('signOutBtn').addEventListener('click', function(){ firebase.auth().signOut().then(()=> window.location.href='/'); });
+        });
+    </script>
+</body>
+</html>

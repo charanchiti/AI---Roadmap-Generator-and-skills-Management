@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Edit Skills - SkillSprint</title>
+    <style>
+        :root{
+            --accent-1:#667eea;
+            --accent-2:#764ba2;
+            --muted:#6b7280;
+            --card-bg:#ffffff;
+            --page-bg: #f6f8ff;
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{height:100%;font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:var(--page-bg);color:#222}
+
+        /* Top navbar */
+        .navbar{width:100%;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;padding:10px 20px;box-shadow:0 6px 24px rgba(102,126,234,0.08);position:sticky;top:0;z-index:40}
+        .nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+        .brand{display:flex;align-items:center;gap:10px;cursor:pointer}
+        .brand .logo{font-size:1.25rem;font-weight:800}
+        .nav-links{display:flex;gap:14px}
+        .nav-link{color:rgba(255,255,255,0.92);text-decoration:none;font-weight:600;padding:8px 12px;border-radius:8px}
+        .nav-link.active{background:rgba(255,255,255,0.12)}
+
+        /* Page container */
+        .page{max-width:920px;margin:28px auto;padding:20px}
+        .card{background:var(--card-bg);border-radius:14px;padding:28px;box-shadow:0 12px 36px rgba(15,23,42,0.06)}
+
+        .header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+        .header h2{color:var(--accent-1);font-size:1.5rem}
+        .sub{color:var(--muted);font-size:0.95rem}
+
+        /* Skill list */
+        .skill-list{list-style:none;margin-top:10px}
+        .skill-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eef2fb}
+        .skill-left{display:flex;align-items:center;gap:12px}
+        .skill-name{font-weight:700;color:#111}
+        .skill-level{color:var(--muted);font-size:0.95rem}
+        .skill-actions{display:flex;gap:8px}
+        .btn-ghost{background:transparent;border:none;color:var(--accent-1);cursor:pointer;padding:6px;border-radius:8px}
+        .btn-ghost:hover{background:#f1f5ff}
+
+        /* Add form */
+        .add-form{display:flex;gap:10px;margin-top:18px;align-items:center}
+        .add-form input[type="text"],.add-form input[type="number"]{padding:10px 12px;border:1px solid #e6eefc;border-radius:10px;font-size:0.98rem}
+        .add-form input[type="text"]{flex:1}
+        .save-btn{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border:none;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer}
+
+        .back-btn{background:#f4f6fb;color:var(--accent-1);border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+
+        @media (max-width:700px){
+            .nav-links{display:none}
+            .page{margin:16px}
+            .add-form{flex-direction:column;align-items:stretch}
+            .add-form input[type="number"]{width:100%}
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-inner">
+            <div class="brand" onclick="location.href='index.html'">
+                <div class="logo">SkillSprint</div>
+                <div style="font-size:0.95rem;color:rgba(255,255,255,0.9);font-weight:600">Edit Skills</div>
+            </div>
+            <nav class="nav-links" aria-label="Primary">
+                <a class="nav-link" href="index.html">Home</a>
+                <a class="nav-link active" href="add-skill.html">Skills</a>
+                <a class="nav-link" href="generate.html">Roadmap</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page">
+        <section class="card">
+            <div class="header">
+                <div>
+                    <h2>Edit Your Skills</h2>
+                    <div class="sub">Manage your skills and proficiency levels. These are saved locally in your browser.</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <button class="back-btn" onclick="location.href='index.html'">← Home</button>
+                </div>
+            </div>
+
+            <ul id="editSkillList" class="skill-list" aria-live="polite"></ul>
+
+            <form id="addSkillForm" class="add-form" aria-label="Add skill form">
+                <input type="text" id="newSkillName" placeholder="Skill name (e.g. Python)" required />
+                <input type="number" id="newSkillLevel" min="1" max="10" value="1" aria-label="Proficiency" required />
+                <button type="submit" class="save-btn">Add Skill</button>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        // Keep existing localStorage behavior
+        function getSkills(){ return JSON.parse(localStorage.getItem('skillsprint_user_skills')||'[]'); }
+        function setSkills(s){ localStorage.setItem('skillsprint_user_skills', JSON.stringify(s)); }
+
+        function renderSkills(){
+            const skills = getSkills();
+            const list = document.getElementById('editSkillList');
+            list.innerHTML = '';
+            if(skills.length===0){
+                const li=document.createElement('li'); li.className='skill-item'; li.innerHTML = '<div class="skill-left"><div class="skill-name" style="color:#8b93a7">No skills added yet</div></div>';
+                list.appendChild(li); return;
+            }
+            skills.forEach((skill,idx)=>{
+                const li=document.createElement('li'); li.className='skill-item';
+                li.innerHTML = `
+                    <div class="skill-left">
+                        <div class="skill-name">${escapeHtml(skill.name)}</div>
+                        <div class="skill-level">Proficiency: ${skill.level}/10</div>
+                    </div>
+                    <div class="skill-actions">
+                        <button class="btn-ghost" onclick="editSkill(${idx})">✏️ Edit</button>
+                        <button class="btn-ghost" onclick="deleteSkill(${idx})">🗑️ Delete</button>
+                    </div>`;
+                list.appendChild(li);
+            });
+        }
+
+        function editSkill(idx){
+            const skills=getSkills();
+            const s=skills[idx];
+            const newName=prompt('Edit skill name:', s.name);
+            if(newName===null) return;
+            const trimmed=newName.trim(); if(trimmed!=='') s.name=trimmed;
+            const newLevel=prompt('Edit proficiency (1-10):', s.level);
+            if(newLevel!==null && !isNaN(newLevel) && newLevel>=1 && newLevel<=10) s.level=Number(newLevel);
+            setSkills(skills); renderSkills();
+        }
+
+        function deleteSkill(idx){ if(!confirm('Delete this skill?')) return; const skills=getSkills(); skills.splice(idx,1); setSkills(skills); renderSkills(); }
+
+        document.getElementById('addSkillForm').onsubmit = function(e){
+            e.preventDefault();
+            const name=document.getElementById('newSkillName').value.trim();
+            const level=Number(document.getElementById('newSkillLevel').value);
+            if(!name || isNaN(level) || level<1 || level>10) return;
+            const skills=getSkills(); skills.push({name,level}); setSkills(skills); renderSkills(); this.reset();
+        };
+
+        // small helper to avoid XSS when rendering
+        function escapeHtml(str){ return String(str).replace(/[&<>"']/g, function(s){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]; }); }
+
+        renderSkills();
+    </script>
+</body>
+</html>

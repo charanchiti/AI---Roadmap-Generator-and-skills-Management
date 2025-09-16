@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSprint - Personalized Learning Roadmaps</title>
+    
+    <!-- Firebase SDK for Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+        <style>
+            .navbar {
+                width: 100%;
+                background: #fff;
+                box-shadow: 0 2px 12px rgba(102,126,234,0.07);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 20px;
+                height: 64px; /* reduced height */
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            .navbar-logo {
+                display: flex;
+                align-items: center;
+            }
+            .navbar-logo span { font-size: 1.15rem; font-weight: 700; color: #667eea; }
+            .navbar-links {
+                display: flex;
+                gap: 24px;
+            }
+            .nav-link {
+                color: #667eea;
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 1.02rem;
+                padding: 6px 10px;
+                border-radius: 6px;
+                transition: background 0.18s, color 0.18s;
+            }
+            .nav-link:hover, .nav-link.active {
+                background: #eef2ff;
+                color: #4c51bf;
+            }
+            .navbar-user {
+                position: relative;
+                margin-left: 24px;
+            }
+            .user-btn {
+                background: #eef2ff;
+                color: #667eea;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 10px;
+                font-weight: 700;
+                font-size: 0.98rem;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .user-btn:after {
+                content: '\25BC';
+                font-size: 0.8em;
+                margin-left: 6px;
+            }
+            .user-dropdown {
+                display: none;
+                position: absolute;
+                right: 0;
+                top: 110%;
+                background: #fff;
+                box-shadow: 0 4px 16px rgba(102,126,234,0.13);
+                border-radius: 8px;
+                min-width: 140px;
+                z-index: 200;
+                flex-direction: column;
+                padding: 8px 0;
+            }
+            .user-dropdown.show {
+                display: flex;
+            }
+            .user-dropdown a, .user-dropdown button {
+                background: none;
+                border: none;
+                color: #667eea;
+                text-align: left;
+                padding: 10px 22px;
+                font-size: 1rem;
+                font-weight: 500;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background 0.15s;
+            }
+            .user-dropdown a:hover, .user-dropdown button:hover {
+                background: #eef2ff;
+            }
+            @media (max-width: 700px) {
+                .navbar { flex-direction: column; height: auto; padding: 0 10px; }
+                .navbar-links { gap: 10px; margin-top: 6px; }
+                .navbar-user { margin-left: 0; margin-top: 8px; }
+            }
+        </style>
+    
+
+    
+    <style>
+        .dashboard-sections {
+            display: flex;
+            gap: 0;
+            flex-wrap: wrap;
+            margin-top: 24px;
+            background: none;
+        }
+        .dashboard-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            padding: 32px 28px 28px 28px;
+            margin: 0;
+            flex: 1 1 380px;
+            min-width: 340px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .left-card {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .right-card {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+        .vertical-divider {
+            width: 2px;
+            background: linear-gradient(180deg, #667eea 0%, #28a745 100%);
+            margin: 0 0px;
+            min-height: 420px;
+            align-self: stretch;
+            opacity: 0.12;
+        }
+        .dashboard-heading {
+            font-size: 1.35rem;
+            margin-bottom: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .skill-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 18px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .skill-pill {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(90deg, #eef2ff 60%, #e0e7ff 100%);
+            border-radius: 8px;
+            padding: 12px 18px;
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: #374151;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.06);
+            border: 1.5px solid #c7d2fe;
+            text-transform: capitalize;
+            letter-spacing: 0.2px;
+            gap: 18px;
+        }
+        .skill-pill .skill-name {
+            font-weight: bold;
+            text-transform: capitalize;
+            margin-right: 18px;
+        }
+        .proficiency-bar-container {
+            flex: 1;
+            max-width: 180px;
+            margin-left: 10px;
+            background: #e5e7eb;
+            border-radius: 6px;
+            height: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .proficiency-bar {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #667eea 0%, #28a745 100%);
+            transition: width 0.3s;
+        }
+        .proficiency-label {
+            font-size: 0.95rem;
+            color: #555;
+            margin-left: 10px;
+            min-width: 32px;
+            text-align: right;
+        }
+        @media (max-width: 900px) {
+            .dashboard-sections {
+                flex-direction: column;
+            }
+            .vertical-divider {
+                display: none;
+            }
+            .dashboard-card {
+                border-radius: 15px !important;
+                margin-bottom: 24px;
+            }
+        }
+        /* Modern CSS with clean design */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: -5px 6px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .auth-info {
+            background: #e8f5e8;
+            border: 1px solid #d4edda;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .auth-info p {
+            margin: 0;
+            color: #155724;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .roadmap-display {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            line-height: 1.7;
+            max-height: 600px;
+            overflow-y: auto;
+            border-left: 4px solid #667eea;
+        }
+
+        .roadmap-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; }
+        .roadmap-overview { margin: 10px 0 20px; color: #444; }
+        .roadmap-section { margin-top: 18px; }
+        .roadmap-section h4 { color: #667eea; margin-bottom: 8px; }
+        .roadmap-list { padding-left: 18px; }
+        .resource-list a { color: #0069d9; text-decoration: none; }
+        .resource-list a:hover { text-decoration: underline; }
+        .roadmap-fallback { white-space: pre-wrap; font-family: 'Courier New', monospace; }
+
+        /* Progress Bar */
+        .progress-wrapper { margin-top: 12px; }
+        .progress-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .progress-text { font-size: 0.95rem; color: #444; }
+        .progress { background: #e9ecef; border-radius: 8px; height: 12px; overflow: hidden; }
+        .progress-bar { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); height: 100%; width: 0%; transition: width 0.3s ease; }
+
+        /* Skill suggestions */
+        .skill-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .pill { background: #eef2ff; color: #374151; border: 1px solid #c7d2fe; padding: 6px 10px; border-radius: 9999px; cursor: pointer; font-size: 0.9rem; }
+        .pill:hover { background: #e0e7ff; }
+
+
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .user-info {
+            background: #e3f2fd;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            margin-top: 6px;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+        }
+
+        .logout-btn:hover {
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+    <style>
+        /* Center the login card on the page and center its inner text/controls */
+        #loginSection {
+            max-width: 520px;
+            margin: 0 auto 30px;
+            text-align: center; /* center headings, paragraphs inside the card */
+        }
+
+        /* Make form groups visually centered and constrain input width */
+        #loginSection .form-group { margin-bottom: 16px; text-align: center; }
+        #loginSection .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; text-align: center; }
+        #loginSection .form-group input { width: 100%; max-width: 420px; margin: 0 auto; display: inline-block; }
+
+        /* Replace inline button layout with a reusable class and center the buttons */
+        #loginSection .auth-actions { display: flex; gap: 15px; justify-content: center; margin-bottom: 20px; }
+        #loginSection .auth-actions .btn { flex: 0 1 48%; max-width: 220px; }
+
+        /* Center the informational paragraph */
+        #loginSection .auth-info p { text-align: center; color: #555; }
+
+        /* Small screens stack the action buttons */
+        @media (max-width: 480px) {
+            #loginSection .auth-actions { flex-direction: column; }
+            #loginSection .auth-actions .btn { width: 100%; max-width: 100%; }
+        }
+    </style>
+    <style>
+        /* Left-align only the email and password labels while keeping the card centered */
+        #loginSection label[for="email"],
+        #loginSection label[for="password"] {
+            text-align: left;
+            display: block;
+            max-width: 420px;
+            margin: 0 auto 8px; /* align with input width */
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar will be injected here after login (outside .container so it spans full width) -->
+    <div id="navbarContainer"></div>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1>SkillSprint</h1>
+            <p>Generate personalized learning roadmaps with AI</p>
+        </div>
+
+        <!-- Login Form (shown when not authenticated) -->
+        <div id="loginSection" class="card">
+            <h2 style="margin-bottom: 20px; color: #667eea;">🔐 Welcome to SkillSprint</h2>
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="Enter your email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" required>
+            </div>
+            
+            <div class="auth-actions">
+                <button class="btn" onclick="signIn()">Sign In</button>
+                <button class="btn btn-success" onclick="signUp()">Sign Up</button>
+            </div>
+            
+            <div class="auth-info">
+                <p><strong>New to SkillSprint?</strong> Click "Sign Up" to create your account and start generating personalized learning roadmaps! 🚀</p>
+            </div>
+            
+            <div id="authMessage"></div>
+        </div>
+
+                    <!-- Main App (shown when authenticated) -->
+                    <div id="appSection" class="card hidden">
+            <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+                <!-- Roadmap Generation Form -->
+                    <div class="dashboard-card left-card">
+                        <h2 class="dashboard-heading">Generate Your Learning Roadmap</h2>
+                        <div class="form-group">
+                        <label for="skillName">What skill do you want to learn?</label>
+                        <input type="text" id="skillName" placeholder="e.g., JavaScript Programming, Data Science, Web Development" required>
+                        <div id="skillSuggestions" class="skill-pills"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="numberOfDays">How many days do you have?</label>
+                        <input type="number" id="numberOfDays" min="1" max="365" placeholder="e.g., 30" required>
+                    </div>
+                    <button class="btn" onclick="generateRoadmap()" id="generateBtn"> Generate Roadmap</button>
+                    <div id="loading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>🤖 AI is crafting your personalized learning roadmap...</p>
+                    </div>
+                    <div id="roadmapResult" class="hidden">
+                        <h3 style="margin: 20px 0; color: #667eea;">📚 Your Learning Roadmap</h3>
+                        <div class="progress-wrapper">
+                            <div class="progress-header">
+                                <span class="progress-text" id="progressText">Progress: 0%</span>
+                                <button class="btn btn-secondary" id="resetProgressBtn" style="width:auto; padding:6px 12px;">Reset</button>
+                            </div>
+                            <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+                        </div>
+                        <div id="roadmapContent" class="roadmap-display"></div>
+                    </div>
+                    <div id="message"></div>
+                </div>
+                <!-- Skills Section -->
+                <div class="vertical-divider"></div>
+                <div class="dashboard-card right-card">
+                    <h2 class="dashboard-heading" style="color: #28a745;">🛠️ Your Skills</h2>
+                    <ul id="skillList" class="skill-list"></ul>
+                    <button class="btn btn-success" style="width:100%; margin-top:auto;" onclick="window.location.href='add-skill.html'">Add Skill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Username dropdown logic
+        document.addEventListener('DOMContentLoaded', function() {
+            var btn = document.getElementById('userDropdownBtn');
+            var menu = document.getElementById('userDropdownMenu');
+            btn && btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menu.classList.toggle('show');
+            });
+            document.addEventListener('click', function() {
+                menu && menu.classList.remove('show');
+            });
+            // Set username from Firebase auth
+            if (window.firebase && firebase.auth) {
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        document.getElementById('navbarUsername').textContent = user.displayName || user.email || 'User';
+                    }
+                });
+            }
+        });
+        // Sign out logic
+        function signOutUser() {
+            if (window.firebase && firebase.auth) {
+                firebase.auth().signOut().then(function() {
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+        // --- Skills Section Logic ---
+        function getSkills() {
+            return JSON.parse(localStorage.getItem('skillsprint_user_skills') || '[]');
+        }
+        function renderSkills() {
+            const skills = getSkills();
+            const list = document.getElementById('skillList');
+            if (!list) return;
+            list.innerHTML = '';
+            if (skills.length === 0) {
+                list.innerHTML = '<li style="color:#888;">No skills added yet.</li>';
+            } else {
+                skills.forEach(skill => {
+                    const li = document.createElement('li');
+                    li.className = 'skill-pill';
+                    const percent = Math.max(1, Math.min(10, Number(skill.level))) * 10;
+                    li.innerHTML = `
+                        <span class='skill-name'>${skill.name}</span>
+                        <div class='proficiency-bar-container'>
+                            <div class='proficiency-bar' style='width:${percent}%;'></div>
+                        </div>
+                        <span class='proficiency-label'>${skill.level}/10</span>
+                    `;
+                    list.appendChild(li);
+                });
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            renderSkills();
+        });
+        // Firebase Configuration
+        // Replace these with your actual Firebase project configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOORC_HCzVIA1P4AN-_Z47fAk-qHZRHWs",
+            authDomain: "skillsprint-7d54e.firebaseapp.com",
+            projectId: "skillsprint-7d54e",
+            storageBucket: "skillsprint-7d54e.firebasestorage.app",
+            messagingSenderId: "389728648008", // You'll need to get this from Firebase Console
+            appId: "1:389728648008:web:65b893bf93a76419e6917d" // You'll need to get this from Firebase Console
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // Global variables
+        let currentUser = null;
+        let userToken = null;
+
+        // Navbar HTML (no Skills button)
+        function getNavbarHTML(username) {
+            return `
+            <nav class="navbar">
+                <div class="navbar-logo" onclick="window.location.href='index.html'" style="cursor:pointer;">
+                    <span style="font-size:1.5rem; font-weight:700; color:#667eea; letter-spacing:1px;">🚀 SkillSprint</span>
+                </div>
+                <div class="navbar-links">
+                    <a href="index.html" class="nav-link active">Home</a>
+                    <a href="generate.html" class="nav-link">Roadmap</a>
+                </div>
+                <div class="navbar-user" id="navbarUser">
+                    <button class="user-btn" id="userDropdownBtn">
+                        <span id="navbarUsername">${username || 'User'}</span>
+                    </button>
+                    <div class="user-dropdown" id="userDropdownMenu">
+                        <a href="profile.html">Profile</a>
+                        <button onclick="signOutUser()">Sign Out</button>
+                    </div>
+                </div>
+            </nav>`;
+        }
+
+        // Inject navbar and set up dropdown logic
+        function showNavbar(user) {
+            var username = user.displayName || user.email || 'User';
+            document.getElementById('navbarContainer').innerHTML = getNavbarHTML(username);
+            // Dropdown logic
+            var btn = document.getElementById('userDropdownBtn');
+            var menu = document.getElementById('userDropdownMenu');
+            btn && btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menu.classList.toggle('show');
+            });
+            document.addEventListener('click', function() {
+                menu && menu.classList.remove('show');
+            });
+        }
+
+        // Sign out logic
+        function signOutUser() {
+            if (window.firebase && firebase.auth) {
+                firebase.auth().signOut().then(function() {
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+
+        // Check authentication state on page load
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // User is signed in
+                currentUser = user;
+                try {
+                    userToken = await user.getIdToken();
+                    console.log('Firebase ID token obtained:', userToken ? 'Token received' : 'No token');
+                } catch (error) {
+                    console.error('Error getting ID token:', error);
+                    userToken = null;
+                }
+                showNavbar(user);
+                showApp();
+                updateUserInfo();
+                loadSkillSuggestions();
+            } else {
+                // User is signed out
+                currentUser = null;
+                userToken = null;
+                document.getElementById('navbarContainer').innerHTML = '';
+                showLogin();
+            }
+        });
+
+        // Show/Hide sections
+        function showLogin() {
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.add('hidden');
+        }
+
+        function showApp() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('appSection').classList.remove('hidden');
+        }
+
+        // Update user information display
+        function updateUserInfo() {
+            if (currentUser) {
+                document.getElementById('userEmail').textContent = currentUser.email;
+                document.getElementById('userInfo').classList.remove('hidden');
+            }
+        }
+
+        // Sign in function
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('authMessage');
+
+            if (!email || !password) {
+                showMessage('Please enter both email and password', 'error', messageDiv);
+                return;
+            }
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                // Get fresh token after sign in
+                userToken = await userCredential.user.getIdToken();
+                showMessage('Signed in successfully!', 'success', messageDiv);
+            } catch (error) {
+                if (error.code === 'auth/user-not-found') {
+                    showMessage('Account not found. Please use "Sign Up" to create a new account.', 'error', messageDiv);
+                } else if (error.code === 'auth/wrong-password') {
+                    showMessage('Incorrect password. Please try again.', 'error', messageDiv);
+                } else {
+                    showMessage(`Sign in failed: ${error.message}`, 'error', messageDiv);
+                }
+            }
+        }
+
+        // Sign up function
+        async function signUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('authMessage');
+
+            if (!email || !password) {
+                showMessage('Please enter both email and password', 'error', messageDiv);
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters long', 'error', messageDiv);
+                return;
+            }
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                // Get fresh token after sign up
+                userToken = await userCredential.user.getIdToken();
+                showMessage('Account created successfully! Welcome to SkillSprint! 🎉', 'success', messageDiv);
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    showMessage('An account with this email already exists. Please use "Sign In" instead.', 'error', messageDiv);
+                } else if (error.code === 'auth/invalid-email') {
+                    showMessage('Please enter a valid email address', 'error', messageDiv);
+                } else if (error.code === 'auth/weak-password') {
+                    showMessage('Password is too weak. Please choose a stronger password (at least 6 characters)', 'error', messageDiv);
+                } else {
+                    showMessage(`Account creation failed: ${error.message}`, 'error', messageDiv);
+                }
+            }
+        }
+
+        // Sign out function
+        function signOut() {
+            auth.signOut();
+        }
+
+        // Generate roadmap function
+        async function generateRoadmap() {
+            const skillName = document.getElementById('skillName').value;
+            const numberOfDays = document.getElementById('numberOfDays').value;
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const roadmapResult = document.getElementById('roadmapResult');
+            const messageDiv = document.getElementById('message');
+
+            // Validation
+            if (!skillName || !numberOfDays) {
+                showMessage('Please fill in all fields', 'error', messageDiv);
+                return;
+            }
+
+            if (numberOfDays < 1 || numberOfDays > 365) {
+                showMessage('Please enter a valid number of days (1-365)', 'error', messageDiv);
+                return;
+            }
+
+            // Check if user is authenticated and get fresh token
+            if (!currentUser) {
+                showMessage('Please sign in to generate roadmaps', 'error', messageDiv);
+                return;
+            }
+
+            try {
+                // Get a fresh token before making the API call
+                userToken = await currentUser.getIdToken(true); // Force refresh
+                console.log('Using fresh token for API call');
+            } catch (error) {
+                console.error('Error refreshing token:', error);
+                showMessage('Authentication error. Please sign in again.', 'error', messageDiv);
+                return;
+            }
+
+            // Show loading state
+            generateBtn.disabled = true;
+            loading.classList.remove('hidden');
+            roadmapResult.classList.add('hidden');
+            clearMessage(messageDiv);
+
+            try {
+                // Make the API call with the fresh token
+                const response = await fetch('/api/generate/roadmap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${userToken}`
+                    },
+                    body: JSON.stringify({
+                        skillName,
+                        numberOfDays: parseInt(numberOfDays)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success - display the roadmap
+                    console.log('Roadmap data to be saved:', data.data);
+                    renderRoadmap(data.data);
+                    roadmapResult.classList.remove('hidden');
+                    showMessage('Roadmap generated successfully!', 'success', messageDiv);
+                    // Navigate to the results page with the roadmap data
+                    navigateToResultsPage(data.data);
+                } else {
+                    // Error from server
+                    showMessage(`Error: ${data.message || 'Failed to generate roadmap'}`, 'error', messageDiv);
+                }
+
+            } catch (error) {
+                // Network or other errors
+                showMessage(`Network error: ${error.message}`, 'error', messageDiv);
+            } finally {
+                // Hide loading state
+                loading.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+
+        // Navigate to results page with roadmap data
+        function navigateToResultsPage(roadmapData) {
+            // Store the roadmap data in localStorage so the results page can access it
+            if (roadmapData && typeof roadmapData === 'object') {
+                localStorage.setItem('skillsprint_roadmap_data', JSON.stringify(roadmapData));
+            } else {
+                alert('Failed to generate roadmap. Please try again.');
+                return;
+            }
+            // Navigate to the results page
+            window.location.href = '/generate.html';
+        }
+
+        // Helper function to show messages
+        function showMessage(message, type, element) {
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Helper function to clear messages
+        function clearMessage(element) {
+            element.innerHTML = '';
+        }
+
+
+
+        // Helper function to show messages
+        function showMessage(message, type, element) {
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Helper function to clear messages
+        function clearMessage(element) {
+            element.innerHTML = '';
+        }
+
+        // Render roadmap (structured if available, otherwise fallback to text)
+        function renderRoadmap(payload) {
+            const container = document.getElementById('roadmapContent');
+            const structured = payload.roadmapStructured;
+            if (!structured) {
+                container.innerHTML = `<div class="roadmap-fallback">${escapeHtml(payload.roadmap)}</div>`;
+                return;
+            }
+
+            const {
+                title, overview, totalDays, phases = [], resources = {}, projects = [], successMetrics = []
+            } = structured;
+
+            const resourceSection = (label, items) => {
+                if (!items || !items.length) return '';
+                const links = items.map(r => `<li><a href="${encodeURI(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></li>`).join('');
+                return `
+                    <div class="roadmap-section">
+                        <h4>${label}</h4>
+                        <ul class="roadmap-list resource-list">${links}</ul>
+                    </div>
+                `;
+            };
+
+            const phasesHtml = phases.map((p, idx) => {
+                const topicsBlock = (p.topics || []).map(t => {
+                    // Topic can be a string or an object { name, resources[] }
+                    if (typeof t === 'string') {
+                        return `<li><label><input type="checkbox" class="progress-item" data-scope="topic" data-key="${progressKey(payload)}" data-id="phase${idx}-topic-${slugify(t)}"> ${escapeHtml(t)}</label></li>`;
+                    }
+                    const topicName = escapeHtml(t.name || 'Topic');
+                    const topicResources = (t.resources || []).map(r => `<li><a href="${encodeURI(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a></li>`).join('');
+                    const resourcesHtml = topicResources ? `<ul class="roadmap-list resource-list">${topicResources}</ul>` : '';
+                    return `<li><div><label><input type="checkbox" class="progress-item" data-scope="topic" data-key="${progressKey(payload)}" data-id="phase${idx}-topic-${slugify(t.name || 'topic')}"> <strong>${topicName}</strong></label>${resourcesHtml ? `<div>${resourcesHtml}</div>` : ''}</div></li>`;
+                }).join('');
+
+                return `
+                    <div class="roadmap-section">
+                        <h4>Phase ${idx + 1}: ${escapeHtml(p.name)} (${p.durationDays} days)</h4>
+                        ${p.goals?.length ? `<div><strong>Goals:</strong><ul class="roadmap-list">${p.goals.map(g => `<li><label><input type="checkbox" class="progress-item" data-scope="goal" data-key="${progressKey(payload)}" data-id="phase${idx}-goal-${slugify(g)}"> ${escapeHtml(g)}</label></li>`).join('')}</ul></div>` : ''}
+                        ${topicsBlock ? `<div><strong>Topics:</strong><ul class="roadmap-list">${topicsBlock}</ul></div>` : ''}
+                        ${p.milestones?.length ? `<div><strong>Milestones:</strong><ul class="roadmap-list">${p.milestones.map(m => `<li><label><input type="checkbox" class="progress-item" data-scope="milestone" data-key="${progressKey(payload)}" data-id="phase${idx}-ms-${slugify(m)}"> ${escapeHtml(m)}</label></li>`).join('')}</ul></div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            const resourcesHtml = `
+                ${resourceSection('Websites', resources.websites)}
+                ${resourceSection('Courses', resources.courses)}
+                ${resourceSection('Videos', resources.videos)}
+                ${resourceSection('Books', resources.books)}
+                ${resourceSection('GitHub Projects', resources.githubProjects)}
+            `;
+
+            const projectsHtml = projects?.length ? `<div class="roadmap-section"><h4>Practice Projects</h4><ul class="roadmap-list">${projects.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul></div>` : '';
+            const successHtml = successMetrics?.length ? `<div class="roadmap-section"><h4>Success Metrics</h4><ul class="roadmap-list">${successMetrics.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul></div>` : '';
+
+            container.innerHTML = `
+                <div class="roadmap-title">${escapeHtml(title || `Roadmap: ${payload.skillName}`)}</div>
+                <div class="roadmap-overview">${escapeHtml(overview || '')}</div>
+                <div class="roadmap-section"><strong>Total Duration:</strong> ${totalDays || payload.numberOfDays} days</div>
+                ${phasesHtml}
+                <div class="roadmap-section"><h4>Recommended Resources</h4>${resourcesHtml || '<p>No resources provided.</p>'}</div>
+                ${projectsHtml}
+                ${successHtml}
+            `;
+
+            // Initialize progress state for this roadmap
+            initializeProgress(payload);
+            updateProgressUI(payload);
+            document.querySelectorAll('.progress-item').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    persistProgressItem(cb.dataset.key, cb.dataset.id, cb.checked);
+                    updateProgressUI(payload);
+                });
+                // restore checked state
+                const checked = getProgressState(cb.dataset.key)[cb.dataset.id];
+                if (checked) cb.checked = true;
+            });
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Generate a safe, compact ID from arbitrary text
+        function slugify(input) {
+            return String(input || '')
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '-')        // spaces -> hyphens
+                .replace(/[^a-z0-9\-]/g, '') // remove non-alphanum/hyphen
+                .replace(/-+/g, '-')           // collapse repeats
+                .replace(/^-|-$|_/g, '');      // trim edges/underscores
+        }
+
+        // Skills suggestion pills
+        async function loadSkillSuggestions() {
+            try {
+                const resp = await fetch('/api/generate/skills', { headers: { 'Authorization': `Bearer ${userToken || ''}` } });
+                const data = await resp.json();
+                if (!resp.ok) return;
+                const container = document.getElementById('skillSuggestions');
+                container.innerHTML = (data.data.skills || []).slice(0, 12).map(s => `<span class="pill" data-skill="${escapeHtml(s)}">${escapeHtml(s)}</span>`).join('');
+                container.querySelectorAll('.pill').forEach(p => p.addEventListener('click', () => {
+                    document.getElementById('skillName').value = p.dataset.skill;
+                }));
+            } catch (e) {}
+        }
+
+        // Progress persistence helpers
+        function progressKey(payload) { return `skillsprint:${(payload.skillName || '').toLowerCase()}-${payload.numberOfDays}`; }
+        function getProgressState(key) {
+            try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; }
+        }
+        function setProgressState(key, state) { localStorage.setItem(key, JSON.stringify(state)); }
+        function persistProgressItem(key, id, checked) {
+            const state = getProgressState(key);
+            state[id] = !!checked;
+            setProgressState(key, state);
+        }
+        function initializeProgress(payload) {
+            const key = progressKey(payload);
+            const state = getProgressState(key);
+            setProgressState(key, state);
+            document.getElementById('resetProgressBtn').onclick = () => { setProgressState(key, {}); updateProgressUI(payload); document.querySelectorAll('.progress-item').forEach(cb => cb.checked = false); };
+        }
+        function updateProgressUI(payload) {
+            const key = progressKey(payload);
+            const state = getProgressState(key);
+            const items = Array.from(document.querySelectorAll('.progress-item'));
+            const total = items.length || 1;
+            const done = items.filter(cb => !!state[cb.dataset.id]).length;
+            const pct = Math.round((done / total) * 100);
+            document.getElementById('progressBar').style.width = pct + '%';
+            document.getElementById('progressText').textContent = `Progress: ${pct}% (${done}/${total})`;
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SkillSprint app loaded! 🚀');
+            
+            // Check if user is already signed in
+            if (currentUser) {
+                showApp();
+                updateUserInfo();
+            }
+        });
+
+
+
+        // Debug function to check token status
+        function debugToken() {
+            console.log('Current user:', currentUser ? currentUser.email : 'None');
+            console.log('User token:', userToken ? 'Present' : 'Missing');
+            if (userToken) {
+                console.log('Token length:', userToken.length);
+                console.log('Token preview:', userToken.substring(0, 20) + '...');
+            }
+        }
+
+        // Expose debug function to console
+        window.debugToken = debugToken;
+    </script>
+</body>
+</html>
